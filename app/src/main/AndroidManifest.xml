@@ -20,6 +20,19 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <queries>
+        <package android:name="org.lineageos.twelve" />
+        <intent>
+            <action android:name="androidx.media3.session.MediaLibraryService" />
+        </intent>
+        <intent>
+            <action android:name="androidx.media3.session.MediaSessionService" />
+        </intent>
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".TwelveApplication"
         android:appCategory="audio"
@@ -103,7 +116,7 @@
         </activity>
 
         <service
-            android:name="org.lineageos.twelve.services.PlaybackService"
+            android:name=".services.PlaybackService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
             android:label="@string/app_name"
@@ -111,9 +124,14 @@
 
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaLibraryService" />
-                <action android:name="androidx.media3.session.MediaSessionService" />
                 <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+
+            <intent-filter>
                 <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+            </intent-filter>
+
+            <intent-filter>
                 <action android:name="org.lineageos.twelve.ACTION_TOGGLE_PLAY_PAUSE" />
             </intent-filter>
 
