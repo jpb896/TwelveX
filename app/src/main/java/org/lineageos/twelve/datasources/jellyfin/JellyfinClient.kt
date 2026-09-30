@@ -17,6 +17,8 @@ import org.lineageos.twelve.datasources.jellyfin.models.PlaylistItems
 import org.lineageos.twelve.datasources.jellyfin.models.QueryResult
 import org.lineageos.twelve.datasources.jellyfin.models.SystemInfo
 import org.lineageos.twelve.datasources.jellyfin.models.UpdatePlaylist
+import org.lineageos.twelve.models.Error
+import org.lineageos.twelve.models.Result
 import org.lineageos.twelve.models.SortingRule
 import org.lineageos.twelve.models.SortingStrategy
 import org.lineageos.twelve.utils.Api
@@ -71,6 +73,7 @@ class JellyfinClient(
         queryParameters = listOf(
             "IncludeItemTypes" to "Audio",
             "Recursive" to true,
+            "Fields" to DEFAULT_FIELDS,
         ) + getSortParameter(sortingRule),
     ).execute(api).mapToError()
 
@@ -113,6 +116,7 @@ class JellyfinClient(
             "SearchTerm" to query,
             "IncludeItemTypes" to "Playlist,MusicAlbum,MusicArtist,MusicGenre,Audio",
             "Recursive" to true,
+            "Fields" to DEFAULT_FIELDS,
         ),
     ).execute(api).mapToError()
 
@@ -122,6 +126,7 @@ class JellyfinClient(
             "Filters" to "IsFavorite",
             "IncludeItemTypes" to "Audio",
             "Recursive" to true,
+            "Fields" to DEFAULT_FIELDS,
         ),
     ).execute(api).mapToError()
 
@@ -147,6 +152,7 @@ class JellyfinClient(
             "ParentId" to id,
             "IncludeItemTypes" to "Audio",
             "Recursive" to true,
+            "Fields" to DEFAULT_FIELDS,
         ),
     ).execute(api).mapToError()
 
@@ -155,6 +161,15 @@ class JellyfinClient(
         queryParameters = listOf(
             "ArtistIds" to id,
             "IncludeItemTypes" to "MusicAlbum",
+            "Recursive" to true,
+        ),
+    ).execute(api).mapToError()
+
+    suspend fun getArtistAudios(id: UUID) = ApiRequest.get<QueryResult>(
+        listOf("Items"),
+        queryParameters = listOf(
+            "ArtistIds" to id,
+            "IncludeItemTypes" to "Audio",
             "Recursive" to true,
         ),
     ).execute(api).mapToError()
@@ -172,6 +187,9 @@ class JellyfinClient(
             id.toString(),
             "Items",
         ),
+        queryParameters = listOf(
+            "Fields" to DEFAULT_FIELDS,
+        ),
     ).execute(api).mapToError()
 
     suspend fun getGenreContent(id: UUID) = ApiRequest.get<QueryResult>(
@@ -180,6 +198,7 @@ class JellyfinClient(
             "GenreIds" to id,
             "IncludeItemTypes" to "MusicAlbum,Playlist,Audio",
             "Recursive" to true,
+            "Fields" to DEFAULT_FIELDS,
         ),
     ).execute(api).mapToError()
 
@@ -236,16 +255,31 @@ class JellyfinClient(
         ),
     ).execute(api).mapToError()
 
-    suspend fun removeItemFromPlaylist(id: UUID, audioId: UUID) = ApiRequest.delete<Unit>(
-        listOf(
-            "Playlists",
-            id.toString(),
-            "Items",
-        ),
-        queryParameters = listOf(
-            "EntryIds" to audioId,
-        ),
-    ).execute(api).mapToError()
+    suspend fun removeItemFromPlaylist(id: UUID, audioId: UUID): Result<Unit, Error> {
+        // Resolve playlist item ID from the track
+        val entryIds = when (val tracks = getPlaylistTracks(id)) {
+            is Result.Success -> tracks.data.items
+                .filter { it.id == audioId }
+                .mapNotNull { it.playlistItemId }
+
+            is Result.Failure -> return Result.Failure(tracks.error, tracks.throwable)
+        }
+
+        if (entryIds.isEmpty()) {
+            return Result.Failure(Error.NOT_FOUND)
+        }
+
+        return ApiRequest.delete<Unit>(
+            listOf(
+                "Playlists",
+                id.toString(),
+                "Items",
+            ),
+            queryParameters = listOf(
+                "EntryIds" to entryIds.joinToString(","),
+            ),
+        ).execute(api).mapToError()
+    }
 
     suspend fun getSystemInfo() = ApiRequest.get<SystemInfo>(
         listOf(
@@ -276,6 +310,7 @@ class JellyfinClient(
             "Type" to "Audio",
             "Recursive" to true,
             "Limit" to 12,
+            "Fields" to DEFAULT_FIELDS,
         )
     ).execute(api).mapToError()
 
@@ -287,6 +322,7 @@ class JellyfinClient(
         queryParameters = listOf(
             "Type" to "Audio",
             "Limit" to 25,
+            "Fields" to DEFAULT_FIELDS,
         )
     ).execute(api).mapToError()
 
@@ -339,6 +375,9 @@ class JellyfinClient(
             "Items",
             id.toString(),
         ),
+        queryParameters = listOf(
+            "Fields" to DEFAULT_FIELDS,
+        ),
     ).execute(api).mapToError()
 
     private fun getItemThumbnail(id: UUID) = api.buildUrl(
@@ -363,6 +402,7 @@ class JellyfinClient(
                 SortingStrategy.MODIFICATION_DATE -> "DateLastContentAdded"
                 SortingStrategy.NAME -> "Name"
                 SortingStrategy.PLAY_COUNT -> "PlayCount"
+                SortingStrategy.RANDOM -> "Random"
             }
         )
 
@@ -376,5 +416,6 @@ class JellyfinClient(
 
     companion object {
         const val JELLYFIN_API_VERSION = "10.10.3"
+        private const val DEFAULT_FIELDS = "Genres,GenreItems,ArtistItems"
     }
 }
