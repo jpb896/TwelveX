@@ -45,6 +45,10 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             R.string.library_fragment_menu_playlists,
             { PlaylistsFragment() },
         ),
+        TRACKS(
+            R.string.library_fragment_menu_tracks,
+            { TracksFragment() },
+        ),
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

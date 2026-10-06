@@ -90,10 +90,6 @@ class PlaylistFragment : CollapsingToolbarLayoutFragment(R.layout.fragment_playl
             UniqueItemDiffCallback(),
             ::ListItem,
         ) {
-            override fun ViewHolder.onPrepareView() {
-                view.setLeadingIconImage(R.drawable.ic_music_note)
-            }
-
             override fun ViewHolder.onBindView(item: Audio) {
                 view.setOnClickListener {
                     viewModel.playPlaylist(bindingAdapterPosition)
@@ -108,6 +104,8 @@ class PlaylistFragment : CollapsingToolbarLayoutFragment(R.layout.fragment_playl
                     )
                     true
                 }
+
+                view.loadLeadingIconImage(item.thumbnail)
 
                 view.headlineText = item.title
                 item.artistName?.also {

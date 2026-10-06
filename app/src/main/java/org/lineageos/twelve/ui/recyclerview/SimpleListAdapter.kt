@@ -26,7 +26,14 @@ abstract class SimpleListAdapter<T, V : View>(
     open fun ViewHolder.onPrepareView() {}
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ViewHolder(
-        factory(parent.context),
+        factory(parent.context).apply {
+            if (layoutParams == null) {
+                layoutParams = RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+            }
+        },
     )
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {

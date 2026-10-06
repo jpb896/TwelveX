@@ -99,6 +99,17 @@ class MediaRepositoryTree(
     )
 
     /**
+     * Tracks media item.
+     */
+    private val tracksMediaItem = buildMediaItem(
+        title = context.getString(R.string.library_item_tracks),
+        mediaId = TRACKS_MEDIA_ITEM_ID,
+        isPlayable = false,
+        isBrowsable = true,
+        mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED,
+    )
+
+    /**
      * Change provider media item.
      */
     private val changeProviderMediaItem = buildMediaItem(
@@ -149,6 +160,8 @@ class MediaRepositoryTree(
 
         PLAYLISTS_MEDIA_ITEM_ID -> playlistsMediaItem
 
+        TRACKS_MEDIA_ITEM_ID -> tracksMediaItem
+
         CHANGE_PROVIDER_MEDIA_ITEM_ID -> changeProviderMediaItem
 
         else -> when {
@@ -169,6 +182,7 @@ class MediaRepositoryTree(
                 artistsMediaItem,
                 genresMediaItem,
                 playlistsMediaItem,
+                tracksMediaItem,
                 changeProviderMediaItem,
             )
 
@@ -192,6 +206,10 @@ class MediaRepositoryTree(
         }
 
         PLAYLISTS_MEDIA_ITEM_ID -> repository.playlists().toOneShotResult().map {
+            it.toMedia3MediaItem(context.resources)
+        }
+
+        TRACKS_MEDIA_ITEM_ID -> repository.audios().toOneShotResult().map {
             it.toMedia3MediaItem(context.resources)
         }
 
@@ -359,6 +377,7 @@ class MediaRepositoryTree(
         private const val ARTISTS_MEDIA_ITEM_ID = "[artists]"
         private const val GENRES_MEDIA_ITEM_ID = "[genres]"
         private const val PLAYLISTS_MEDIA_ITEM_ID = "[playlists]"
+        private const val TRACKS_MEDIA_ITEM_ID = "[tracks]"
         private const val CHANGE_PROVIDER_MEDIA_ITEM_ID = "[change_provider]"
 
         // Provider ID prefix

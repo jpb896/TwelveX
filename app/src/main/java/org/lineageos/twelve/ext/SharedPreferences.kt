@@ -190,3 +190,17 @@ var SharedPreferences.playlistsSortingRule: SortingRule
         PLAYLISTS_SORTING_REVERSE_KEY,
         value
     )
+
+const val AUDIOS_SORTING_STRATEGY_KEY = "audios_sorting_strategy"
+const val AUDIOS_SORTING_REVERSE_KEY = "audios_sorting_reverse"
+var SharedPreferences.audiosSortingRule: SortingRule
+    get() = getSortingRule(
+        AUDIOS_SORTING_STRATEGY_KEY,
+        AUDIOS_SORTING_REVERSE_KEY,
+        MediaRepository.defaultAudiosSortingRule,
+    )
+    set(value) = setSortingRule(
+        AUDIOS_SORTING_STRATEGY_KEY,
+        AUDIOS_SORTING_REVERSE_KEY,
+        value
+    )

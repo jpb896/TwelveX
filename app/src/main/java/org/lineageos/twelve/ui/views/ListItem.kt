@@ -13,6 +13,7 @@ import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -22,8 +23,10 @@ import androidx.annotation.LayoutRes
 import androidx.annotation.StringRes
 import androidx.core.view.isNotEmpty
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import org.lineageos.twelve.R
+import org.lineageos.twelve.ext.loadThumbnail
 import org.lineageos.twelve.ext.use
 
 /**
@@ -135,6 +138,11 @@ class ListItem @JvmOverloads constructor(
         }
 
     init {
+        layoutParams = RecyclerView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
+
         setCardBackgroundColor(
             context.getColorStateList(R.color.list_item_background)
         )
@@ -194,12 +202,68 @@ class ListItem @JvmOverloads constructor(
     fun setHeadlineText(@StringRes resId: Int, vararg formatArgs: Any) =
         headlineTextView.setTextAndUpdateVisibility(resId, *formatArgs)
 
-    fun setLeadingIconImage(bm: Bitmap) = leadingIconImageView.setImageAndUpdateVisibility(bm)
-    fun setLeadingIconImage(icon: Icon) = leadingIconImageView.setImageAndUpdateVisibility(icon)
-    fun setLeadingIconImage(@DrawableRes resId: Int) =
-        leadingIconImageView.setImageAndUpdateVisibility(resId)
+    fun setLeadingIconImage(bm: Bitmap) {
+        leadingIconImageView.scaleType = ImageView.ScaleType.CENTER_CROP
+        leadingIconImageView.imageTintList = null
+        leadingIconImageView.setImageAndUpdateVisibility(bm)
+    }
 
-    fun setLeadingIconImage(uri: Uri) = leadingIconImageView.setImageAndUpdateVisibility(uri)
+    fun setLeadingIconImage(icon: Icon) {
+        leadingIconImageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
+        leadingIconImageView.imageTintList = context.getColorStateList(R.color.list_item_primary)
+        leadingIconImageView.setImageAndUpdateVisibility(icon)
+    }
+
+    fun setLeadingIconImage(@DrawableRes resId: Int) {
+        leadingIconImageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
+        leadingIconImageView.imageTintList = context.getColorStateList(R.color.list_item_primary)
+        leadingIconImageView.setImageAndUpdateVisibility(resId)
+    }
+
+    fun setLeadingIconImage(uri: Uri) {
+        leadingIconImageView.scaleType = ImageView.ScaleType.CENTER_CROP
+        leadingIconImageView.imageTintList = null
+        leadingIconImageView.setImageAndUpdateVisibility(uri)
+    }
+
+    fun loadLeadingIconImage(
+        data: Any?,
+        @DrawableRes placeholder: Int = R.drawable.ic_music_note,
+    ) {
+        if (data == null) {
+            setLeadingIconImage(placeholder)
+            return
+        }
+
+        leadingIconImageView.scaleType = ImageView.ScaleType.CENTER_CROP
+        leadingIconImageView.loadThumbnail(
+            data,
+            placeholder = placeholder,
+            builder = {
+                listener(
+                    onStart = {
+                        leadingIconImageView.imageTintList = null
+                    },
+                    onCancel = {
+                        leadingIconImageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        leadingIconImageView.imageTintList =
+                            context.getColorStateList(R.color.list_item_primary)
+                        leadingIconImageView.setImageResource(placeholder)
+                    },
+                    onError = { _, _ ->
+                        leadingIconImageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        leadingIconImageView.imageTintList =
+                            context.getColorStateList(R.color.list_item_primary)
+                        leadingIconImageView.setImageResource(placeholder)
+                    },
+                    onSuccess = { _, _ ->
+                        leadingIconImageView.imageTintList = null
+                        leadingIconImageView.isVisible = true
+                    }
+                )
+            }
+        )
+    }
 
     fun setLeadingText(@StringRes resId: Int) = leadingTextView.setTextAndUpdateVisibility(resId)
     fun setLeadingText(@StringRes resId: Int, vararg formatArgs: Any) =
