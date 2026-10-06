@@ -43,6 +43,7 @@ import org.lineageos.twelve.ext.getViewProperty
 import org.lineageos.twelve.ext.loadThumbnail
 import org.lineageos.twelve.ext.navigateSafe
 import org.lineageos.twelve.ext.updatePadding
+import org.lineageos.twelve.ext.updateValueAndRange
 import org.lineageos.twelve.models.FlowResult
 import org.lineageos.twelve.models.FlowResult.Companion.getOrNull
 import org.lineageos.twelve.models.OutputConfiguration
@@ -50,7 +51,6 @@ import org.lineageos.twelve.models.PlaybackState
 import org.lineageos.twelve.models.RepeatMode
 import org.lineageos.twelve.models.Result
 import org.lineageos.twelve.ui.visualizer.VisualizerNVDataSource
-import org.lineageos.twelve.ui.views.PlaybackProgressSlider
 import org.lineageos.twelve.utils.PermissionsChecker
 import org.lineageos.twelve.utils.PermissionsUtils
 import org.lineageos.twelve.utils.TimestampFormatter
@@ -102,8 +102,8 @@ class NowPlayingFragment : Fragment(R.layout.fragment_now_playing) {
     private val visualizerMaterialButton by getViewProperty<MaterialButton>(R.id.visualizerMaterialButton)
     private val visualizerSurfaceView by getViewProperty<SurfaceView>(R.id.visualizerSurfaceView)
 
-    // Progress slider
-    private var playbackProgressSlider: PlaybackProgressSlider? = null
+    // Progress slider state
+    private var isProgressSliderDragging = false
 
     // AudioFX
     private val audioEffectsStartForResult =
@@ -191,21 +191,17 @@ class NowPlayingFragment : Fragment(R.layout.fragment_now_playing) {
         albumTitleTextView.isSelected = true
 
         // Media controls
-        playbackProgressSlider = PlaybackProgressSlider(
-            progressSlider,
-            currentTimestampTextView,
-        )
         progressSlider.setLabelFormatter {
             TimestampFormatter.formatTimestampMillis(it)
         }
         progressSlider.addOnSliderTouchListener(
             object : Slider.OnSliderTouchListener {
                 override fun onStartTrackingTouch(slider: Slider) {
-                    playbackProgressSlider?.startDragging()
+                    isProgressSliderDragging = true
                 }
 
                 override fun onStopTrackingTouch(slider: Slider) {
-                    playbackProgressSlider?.stopDragging()
+                    isProgressSliderDragging = false
                     viewModel.seekToPosition(slider.value.roundToLong())
                 }
             }
@@ -289,7 +285,6 @@ class NowPlayingFragment : Fragment(R.layout.fragment_now_playing) {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.isPlaying.collectLatest { isPlaying ->
-                        playbackProgressSlider?.setIsPlaying(isPlaying)
                         playPauseMaterialButton.setIconResource(
                             when (isPlaying) {
                                 true -> R.drawable.ic_pause
@@ -471,11 +466,20 @@ class NowPlayingFragment : Fragment(R.layout.fragment_now_playing) {
 
                 launch {
                     viewModel.durationCurrentPositionMs.collectLatest {
-                        playbackProgressSlider?.update(
-                            durationMs = it.first,
-                            currentPositionMs = it.second,
-                            playbackSpeed = viewModel.playbackParameters.value.speed,
+                        val durationMs = it.first ?: 0L
+                        val currentPositionMs = it.second ?: 0L
+
+                        val newValueTo = durationMs.toFloat().takeIf { it > 0 } ?: 1f
+                        val newValue = currentPositionMs.toFloat()
+
+                        progressSlider.updateValueAndRange(
+                            value = newValue,
+                            valueTo = newValueTo,
+                            isDragging = isProgressSliderDragging,
                         )
+
+                        currentTimestampTextView.text =
+                            TimestampFormatter.formatTimestampMillis(currentPositionMs)
                     }
                 }
 
@@ -598,9 +602,6 @@ class NowPlayingFragment : Fragment(R.layout.fragment_now_playing) {
     }
 
     override fun onDestroyView() {
-        playbackProgressSlider?.stop()
-        playbackProgressSlider = null
-
         if (isVisualizerStarted) {
             visualizerManager.stop()
         }
